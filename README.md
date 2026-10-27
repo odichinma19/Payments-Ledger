@@ -1,3 +1,5 @@
+![CI](https://github.com/odichinma19/Payments-Ledger/actions/workflows/ci.yml/badge.svg)
+
 # Payments Ledger
 
 A small payments ledger as an ASP.NET Core Web API. Accounts, deposits and transfers are stored as
