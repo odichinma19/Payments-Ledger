@@ -1,0 +1,37 @@
+@host = http://localhost:5080
+
+### Create account A
+POST {{host}}/accounts
+Content-Type: application/json
+
+{ "owner": "Alice" }
+
+### Create account B
+POST {{host}}/accounts
+Content-Type: application/json
+
+{ "owner": "Bob" }
+
+### Deposit 100.00 PLN into A (replace the id)
+POST {{host}}/accounts/00000000-0000-0000-0000-000000000000/deposits
+Content-Type: application/json
+Idempotency-Key: deposit-1
+
+{ "amountMinor": 10000 }
+
+### Transfer 25.00 PLN from A to B (replace the ids). Send it twice: the second call returns 200 and the same transaction.
+POST {{host}}/transfers
+Content-Type: application/json
+Idempotency-Key: transfer-1
+
+{
+  "fromAccountId": "00000000-0000-0000-0000-000000000000",
+  "toAccountId": "00000000-0000-0000-0000-000000000000",
+  "amountMinor": 2500
+}
+
+### List entries of A, newest first
+GET {{host}}/accounts/00000000-0000-0000-0000-000000000000/entries?take=20
+
+### Health
+GET {{host}}/health

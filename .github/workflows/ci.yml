@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+      # The tests start a SQL Server container with Testcontainers (Docker is preinstalled on the runner).
+      - name: Test
+        run: dotnet test --no-build -c Release
+
+  compose-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start the stack
+        run: docker compose up -d --build
+
+      - name: Wait for the API and run a transfer
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fs http://localhost:8080/health; then break; fi
+            sleep 3
+          done
+          curl -fs http://localhost:8080/health
+          A=$(curl -fs -X POST http://localhost:8080/accounts -H 'Content-Type: application/json' -d '{"owner":"A"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["id"])')
+          B=$(curl -fs -X POST http://localhost:8080/accounts -H 'Content-Type: application/json' -d '{"owner":"B"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["id"])')
+          curl -fs -X POST "http://localhost:8080/accounts/$A/deposits" -H 'Content-Type: application/json' -d '{"amountMinor":1000}'
+          curl -fs -X POST http://localhost:8080/transfers -H 'Content-Type: application/json' -H 'Idempotency-Key: ci-1' -d "{\"fromAccountId\":\"$A\",\"toAccountId\":\"$B\",\"amountMinor\":250}"
+          curl -fs "http://localhost:8080/accounts/$B" | grep '"balanceMinor":250'
+
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/PaymentsLedger.Api/PaymentsLedger.Api.csproj" />
+  <Project Path="tests/PaymentsLedger.Tests/PaymentsLedger.Tests.csproj" />
+</Solution>
